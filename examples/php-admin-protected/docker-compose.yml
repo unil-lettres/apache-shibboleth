@@ -1,0 +1,42 @@
+services:
+  php-fpm:
+    image: php:8.2-fpm
+    volumes:
+      - ./app:/var/www/html
+    networks:
+      - app-network
+    container_name: apache-shibboleth-php-fpm
+
+  apache-shibboleth:
+    build: ../../
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      SHIB_HOSTNAME: "localhost:8080"
+      SHIB_CONTACT: "admin@example.ch"
+      SHIB_PROTECTED_PATHS: "/admin"
+      APACHE_CUSTOM_CONFIG: |
+        # This could also be provided in the custom.conf file mounted below
+        <Location /bob>
+            # Shibboleth with specific user restriction
+            AuthType shibboleth
+            ShibRequestSetting requireSession true
+            Require shib-attr uniqueID bob@domain.ch
+        </Location>
+    volumes:
+      - ./custom.conf:/etc/apache2/vhost.d/custom.conf:ro
+      - ./app:/var/www/html
+      - shibboleth-certs:/var/lib/shibboleth
+      - apache-logs:/var/log/apache2
+    networks:
+      - app-network
+    depends_on:
+      - php-fpm
+    container_name: apache-shibboleth-http
+
+volumes:
+  shibboleth-certs:
+  apache-logs:
+
+networks:
+  app-network:
