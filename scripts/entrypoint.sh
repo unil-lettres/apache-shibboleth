@@ -35,7 +35,7 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
 
   # Update Apache configuration file (000-default.conf)
   if grep -q "__SERVER_NAME__" "/etc/apache2/sites-available/000-default.conf"; then
-      sed -i "s|__SERVER_NAME__|$SHIB_HOSTNAME|g" "/etc/apache2/sites-available/000-default.conf"
+      sed -i "s|__SERVER_NAME__|https://$SHIB_HOSTNAME:443|g" "/etc/apache2/sites-available/000-default.conf"
       echo "Replaced ServerName by $SHIB_HOSTNAME in Apache configuration."
   else
     echo "Apache ServerName already configured. No action needed."
