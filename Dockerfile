@@ -29,7 +29,7 @@ RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Enable Apache modules (proxy for reverse proxy mode)
-RUN a2enmod rewrite ssl shib remoteip proxy proxy_http headers
+RUN a2enmod rewrite ssl shib remoteip proxy proxy_http proxy_fcgi headers
 
 # Configure RemoteIP for proxy support
 RUN { \
