@@ -52,6 +52,7 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 |----------|----------|---------|-------------|
 | `SHIB_HOSTNAME` | Yes | - | Your domain name |
 | `SHIB_CONTACT` | Yes | - | Contact email |
+| `SHIB_ENTITY_ID` | No | - | If entityID is not the same as the hostname (when multiple locations registererd for the same entityID). You must only specify the `host` part of the ID. |
 | `SHIB_PROTECTED_PATHS` | No | `/` | Paths to protect with Shibboleth (comma-separated). Set to empty string `""` to disable protection and configure manually. |
 | `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`) |
 | `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`) |

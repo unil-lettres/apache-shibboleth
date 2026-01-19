@@ -3,15 +3,23 @@ set -e
 
 echo "Starting Apache with Shibboleth configuration..."
 
+# Use SHIB_ENTITY_ID if set, otherwise use SHIB_HOSTNAME
+if [ -n "$SHIB_ENTITY_ID" ]; then
+  ENTITY_ID="$SHIB_ENTITY_ID"
+else
+  ENTITY_ID="$SHIB_HOSTNAME"
+fi
+
 # Check if SHIB_HOSTNAME and SHIB_CONTACT are set
 if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
   echo "Configuring Shibboleth with hostname: $SHIB_HOSTNAME"
+  echo "Using Entity ID: $ENTITY_ID"
   
   # Update Shibboleth main configuration file (shibboleth2.xml)
   if grep -q "__HOSTNAME__" "/etc/shibboleth/shibboleth2.xml"; then
-    # Replace hostname placeholder
-    sed -i "s|__HOSTNAME__|$SHIB_HOSTNAME|g" "/etc/shibboleth/shibboleth2.xml"
-    echo "Replaced hostname placeholder with $SHIB_HOSTNAME in Shibboleth configuration."
+    # Replace hostname placeholder with ENTITY_ID
+    sed -i "s|__HOSTNAME__|$ENTITY_ID|g" "/etc/shibboleth/shibboleth2.xml"
+    echo "Replaced hostname placeholder with $ENTITY_ID in Shibboleth configuration."
 
     # Replace contact email placeholder
     sed -i "s|__CONTACT__|$SHIB_CONTACT|g" "/etc/shibboleth/shibboleth2.xml"
@@ -27,8 +35,8 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
 
   # Check if Shibboleth key or certificate file exists, if not generate them
   if [[ ! -f /var/lib/shibboleth/sp-key.pem && ! -f /var/lib/shibboleth/sp-cert.pem ]]; then
-    echo "Shibboleth key and certificate files missing. Generating new key and certificate for $SHIB_HOSTNAME hostname"
-    shib-keygen -f -u _shibd -h $SHIB_HOSTNAME -y 10 -o /var/lib/shibboleth
+    echo "Shibboleth key and certificate files missing. Generating new key and certificate for $ENTITY_ID entity ID"
+    shib-keygen -f -u _shibd -h $ENTITY_ID -y 10 -o /var/lib/shibboleth
   else
     echo "Shibboleth key and certificate files already exist. No action needed."
   fi
