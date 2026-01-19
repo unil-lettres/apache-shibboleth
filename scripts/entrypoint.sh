@@ -12,8 +12,7 @@ fi
 
 # Check if SHIB_HOSTNAME and SHIB_CONTACT are set
 if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
-  echo "Configuring Shibboleth with hostname: $SHIB_HOSTNAME"
-  echo "Using Entity ID: $ENTITY_ID"
+  echo "Configuring Shibboleth with Entity ID: $SHIB_HOSTNAME"
   
   # Update Shibboleth main configuration file (shibboleth2.xml)
   if grep -q "__HOSTNAME__" "/etc/shibboleth/shibboleth2.xml"; then
