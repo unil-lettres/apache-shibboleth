@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Admin - Protected</title>
     <style>
         body { font-family: sans-serif; margin: 40px; }
