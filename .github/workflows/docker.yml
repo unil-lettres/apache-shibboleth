@@ -53,8 +53,8 @@ jobs:
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  merge-app-dev:
-    name: Merge app Dev
+  merge-dev:
+    name: Merge Dev
     runs-on: ubuntu-latest
     needs: [build]
     if: success() && github.event_name != 'schedule' && github.ref == 'refs/heads/development'
