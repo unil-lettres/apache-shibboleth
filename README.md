@@ -104,9 +104,41 @@ You can add any Apache directives for advanced configurations.
 
 ### Shibboleth Certificates Persistence (Required)
 
-Shibboleth certificates **must be persisted** to avoid regeneration on every container restart. Mount a volume to `/var/lib/shibboleth/`.
+Shibboleth certificates **must be persisted** to avoid regeneration on every container restart. Mount a volume to `/var/lib/shibboleth/` in your `docker-compose.yml`:
+
+```yaml
+services:
+  apache-shibboleth:
+    volumes:
+      - shibboleth-certs:/var/lib/shibboleth
+
+volumes:
+  shibboleth-certs:
+```
 
 The certificates are auto-generated on first startup and used to authenticate with the SAML Identity Provider (IdP). If they change, you must re-register your certificat on AAI Resource Registry (https://rr.aai.switch.ch/) and wait for propagation.
+
+**Certificate names:**
+- `sp-key.pem` - Private key
+- `sp-cert.pem` - Public certificate
+
+**Using existing certificates:**
+
+If you already have Shibboleth certificates, you can mount them directly in your `docker-compose.yml`:
+
+```yaml
+services:
+  apache-shibboleth:
+    volumes:
+      - /path/to/certs/existing-sp-key.pem:/var/lib/shibboleth/sp-key.pem:ro
+      - /path/to/certs/existing-sp-cert.pem:/var/lib/shibboleth/sp-cert.pem:ro
+```
+
+Make sure the certificate files have the correct names and are readable by the container.
+
+### Ports
+
+The Apache proxy listens on **port 80** (HTTP). This container is designed to run behind a TLS termination proxy that handles HTTPS.
 
 ## Shibboleth Attributes
 
