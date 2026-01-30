@@ -57,12 +57,21 @@ RUN curl --output /etc/shibboleth/SWITCHaaiRootCA.crt.pem \
 # https://shibboleth.atlassian.net/wiki/spaces/SHIB2/pages/2577072242/SPReverseProxy
 RUN sed -i "s|handlerSSL=\"true\"|handlerSSL=\"false\"|g" "/etc/shibboleth/shibboleth2.xml"
 
+# Create non-root user for running services
+# Add dockeruser to _shibd group so shibd daemon can access necessary files
+RUN groupadd -r dockeruser --gid=1000 && \
+    useradd -r -g dockeruser --uid=1000 --groups=_shibd --home-dir=/var/www/html --shell=/sbin/nologin dockeruser
 
-# Create a directory for Shibboleth certificates
-RUN mkdir -p /var/lib/shibboleth/
-
-# Create a directory for the Shibboleth Unix domain socket
-RUN mkdir -p /run/shibboleth/
+# Create directories and adjust ownership
+RUN mkdir -p /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ /var/log/supervisor/ && \
+    chown -R dockeruser:dockeruser /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ && \
+    chown -R dockeruser:dockeruser /var/www/html && \
+    chown -R dockeruser:dockeruser /var/log/apache2/ && \
+    chown -R dockeruser:dockeruser /var/log/supervisor/ && \
+    chown -R dockeruser:dockeruser /var/run/apache2/ && \
+    chown -R dockeruser:dockeruser /etc/apache2/sites-available/ && \
+    chmod -R g+r /etc/shibboleth/ && \
+    chown -R dockeruser:_shibd /etc/shibboleth/
 
 # Copy configuration files
 COPY config/vhost.conf /etc/apache2/sites-available/000-default.conf
@@ -72,9 +81,15 @@ COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Set ownership after copying files
+RUN chown dockeruser:dockeruser /etc/apache2/sites-available/000-default.conf && \
+    chown dockeruser:dockeruser /usr/local/bin/docker-entrypoint.sh
+
 WORKDIR /var/www/html
 
-EXPOSE 80
+EXPOSE 8080
+
+USER dockeruser
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

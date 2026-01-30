@@ -138,7 +138,7 @@ Make sure the certificate files have the correct names and are readable by the c
 
 ### Ports
 
-The Apache proxy listens on **port 80** (HTTP). This container is designed to run behind a TLS termination proxy that handles HTTPS.
+The Apache proxy listens on **port 8080** (HTTP). This container runs is designed to run behind a TLS termination proxy that handles HTTPS.
 
 ## Shibboleth Attributes
 

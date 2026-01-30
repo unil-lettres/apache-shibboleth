@@ -35,7 +35,12 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
   # Check if Shibboleth key or certificate file exists, if not generate them
   if [[ ! -f /var/lib/shibboleth/sp-key.pem && ! -f /var/lib/shibboleth/sp-cert.pem ]]; then
     echo "Shibboleth key and certificate files missing. Generating new key and certificate for $ENTITY_ID entity ID"
-    shib-keygen -f -u _shibd -h $ENTITY_ID -y 10 -o /var/lib/shibboleth
+    # shib-keygen may output chown errors which are harmless (files already have correct ownership)
+    shib-keygen -f -h $ENTITY_ID -y 10 -o /var/lib/shibboleth 2>&1 | grep -v "chown:" || true
+    # Adjust permissions so _shibd daemon can read the private key
+    chmod 640 /var/lib/shibboleth/sp-key.pem
+    chmod 644 /var/lib/shibboleth/sp-cert.pem
+    echo "Certificates generated and permissions adjusted for _shibd access."
   else
     echo "Shibboleth key and certificate files already exist. No action needed."
   fi
