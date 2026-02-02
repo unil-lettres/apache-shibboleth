@@ -32,8 +32,17 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
     echo "Shibboleth already configured. No action needed."
   fi
 
-  # Check if Shibboleth key or certificate file exists, if not generate them
-  if [[ ! -f /var/lib/shibboleth/sp-key.pem && ! -f /var/lib/shibboleth/sp-cert.pem ]]; then
+  # Check if Shibboleth certificates already exist
+  if [[ -f /var/lib/shibboleth/sp-key.pem && -f /var/lib/shibboleth/sp-cert.pem ]]; then
+    echo "Shibboleth certificates already exist. No action needed."
+  # Check if Docker secrets are provided
+  elif [[ -f /run/secrets/sp-key.pem && -f /run/secrets/sp-cert.pem ]]; then
+    echo "Using Shibboleth certificates from Docker secrets..."
+    ln -s /run/secrets/sp-key.pem /var/lib/shibboleth/sp-key.pem
+    ln -s /run/secrets/sp-cert.pem /var/lib/shibboleth/sp-cert.pem
+    echo "Symbolic links created for certificates from Docker secrets."
+  # Generate new certificates if none exist
+  else
     echo "Shibboleth key and certificate files missing. Generating new key and certificate for $ENTITY_ID entity ID"
     # shib-keygen may output chown errors which are harmless (files already have correct ownership)
     shib-keygen -f -h $ENTITY_ID -y 10 -o /var/lib/shibboleth 2>&1 | grep -v "chown:" || true
@@ -41,8 +50,6 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
     chmod 640 /var/lib/shibboleth/sp-key.pem
     chmod 644 /var/lib/shibboleth/sp-cert.pem
     echo "Certificates generated and permissions adjusted for _shibd access."
-  else
-    echo "Shibboleth key and certificate files already exist. No action needed."
   fi
 
   # Update Apache configuration file (000-default.conf)

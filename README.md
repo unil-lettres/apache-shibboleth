@@ -122,19 +122,33 @@ The certificates are auto-generated on first startup and used to authenticate wi
 - `sp-key.pem` - Private key
 - `sp-cert.pem` - Public certificate
 
-**Using existing certificates:**
+**Using existing certificates with Docker secrets:**
 
-If you already have Shibboleth certificates, you can mount them directly in your `docker-compose.yml`:
+Docker secrets provide a secure way to provide your existing certificates without hardcoding paths or using file mounts. The container automatically detects secrets and creates symbolic links.
 
 ```yaml
 services:
   apache-shibboleth:
-    volumes:
-      - /path/to/certs/existing-sp-key.pem:/var/lib/shibboleth/sp-key.pem:ro
-      - /path/to/certs/existing-sp-cert.pem:/var/lib/shibboleth/sp-cert.pem:ro
+    secrets:
+      - source: sp-key.pem
+        uid: '1000' # optional
+        gid: '1000' # optional
+        mode: 0400 # optional
+      - source: sp-cert.pem
+        uid: '1000' # optional
+        gid: '1000' # optional
+        mode: 0444 # optional
+
+secrets:
+  sp-key.pem:
+    file: ./certs/sp-key.pem
+  sp-cert.pem:
+    file: ./certs/sp-cert.pem
 ```
 
-Make sure the certificate files have the correct names and are readable by the container.
+**Secret permissions:**
+- `uid`/`gid`: Set to `1000` to match the container's `dockeruser`
+- `mode`: `0400` for private key (read-only by owner), `0444` for certificate (readable by all)
 
 ### Ports
 
