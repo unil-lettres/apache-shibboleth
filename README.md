@@ -56,6 +56,8 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 | `SHIB_PROTECTED_PATHS` | No | `/` | Paths to protect with Shibboleth (comma-separated). Set to empty string `""` to disable protection and configure manually. |
 | `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`) |
 | `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`) |
+| `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones |
+| `SHIB_SP_CERT` | No | - | Content of existing Shibboleth public certificate (sp-cert.pem) to use instead of generating new ones |
 | `APACHE_CUSTOM_CONFIG` | No | - | Custom Apache directives for config |
 
 > **Important:** Shibboleth and Apache configurations are generated **only on first startup**. If you modify environment variables, you will need to recreate the container.
@@ -102,10 +104,32 @@ You can add any Apache directives for advanced configurations.
 
 **Note:** For complex authentication scenarios, set `SHIB_PROTECTED_PATHS=""` to disable protection and manage all `<Location>` blocks manually in your custom configuration.
 
-### Shibboleth Certificates Persistence (Required)
+### Shibboleth Certificates
 
-Shibboleth certificates **must be persisted** to avoid regeneration on every container restart. Mount a volume to `/var/lib/shibboleth/` in your `docker-compose.yml`:
+Certificates are used to authenticate with the SAML Identity Provider (IdP). If they change, you must re-register your certificate on [AAI Resource Registry](https://rr.aai.switch.ch/) and wait for propagation.
 
+**Certificate files:**
+- `sp-key.pem` - Private key
+- `sp-cert.pem` - Public certificate
+
+**Certificate management:**
+
+You can provide existing certificates via environment variables `SHIB_SP_KEY` and `SHIB_SP_CERT` or let the container auto-generate new certificates on startup.
+
+If you generate certificates on startup, **you must** persist them with a volume mount to `/var/lib/shibboleth/`.
+
+**.env example with existing certificates:**
+```bash
+SHIB_SP_KEY="-----BEGIN PRIVATE KEY-----
+[Your private key content here]
+-----END PRIVATE KEY-----"
+
+SHIB_SP_CERT="-----BEGIN CERTIFICATE-----
+[Your certificate content here]
+-----END CERTIFICATE-----"
+```
+
+**docker-compose.yml example with volume persistence:**
 ```yaml
 services:
   apache-shibboleth:
@@ -116,25 +140,9 @@ volumes:
   shibboleth-certs:
 ```
 
-The certificates are auto-generated on first startup and used to authenticate with the SAML Identity Provider (IdP). If they change, you must re-register your certificat on AAI Resource Registry (https://rr.aai.switch.ch/) and wait for propagation.
+**Certificate rollover:**
 
-**Certificate names:**
-- `sp-key.pem` - Private key
-- `sp-cert.pem` - Public certificate
-
-**Using existing certificates:**
-
-If you already have Shibboleth certificates, you can mount them directly in your `docker-compose.yml`:
-
-```yaml
-services:
-  apache-shibboleth:
-    volumes:
-      - /path/to/certs/existing-sp-key.pem:/var/lib/shibboleth/sp-key.pem:ro
-      - /path/to/certs/existing-sp-cert.pem:/var/lib/shibboleth/sp-cert.pem:ro
-```
-
-Make sure the certificate files have the correct names and are readable by the container.
+When updating certificates (e.g., for expiration), follow the [SWITCH certificate rollover guide](https://help.switch.ch/aai/guides/sp/certificate-rollover/) to avoid service interruptions. The process involves adding the new certificate alongside the old one, waiting for metadata propagation (≈2 hours), then switching to the new certificate and removing the old one.
 
 ### Ports
 
