@@ -61,7 +61,6 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
   else
     echo "Apache ServerName already configured. No action needed."
   fi
-
 else
   echo "WARNING: SHIB_HOSTNAME and SHIB_CONTACT environment variables are not set."
   echo "Shibboleth and Apache2 will not be properly configured. Please set these variables to enable Shibboleth."
