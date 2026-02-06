@@ -21,7 +21,7 @@ Only the **login endpoint** needs Shibboleth protection. The rest of your site r
 
 **Configuration:**
 ```yaml
-SHIB_PROTECTED_PATHS: "/aai"     # Aplication login endpoint
+SHIB_PROTECTED_PATHS: "/aai"     # Application login endpoint
 ```
 
 ### Case 2: Application without User Management
