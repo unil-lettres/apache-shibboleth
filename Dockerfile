@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     libapache2-mod-shib \
     shibboleth-sp-common \
     shibboleth-sp-utils \
+    python3 \
+    python3-lxml \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -79,13 +81,16 @@ RUN mkdir -p /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2
 COPY config/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Copy the entrypoint script
+# Copy the entrypoint script and Python helper
 COPY scripts/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY scripts/extract_attributes.py /usr/local/bin/extract_attributes.py
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/extract_attributes.py
 
 # Set ownership after copying files
 RUN chown dockeruser:dockeruser /etc/apache2/sites-available/000-default.conf && \
-    chown dockeruser:dockeruser /usr/local/bin/docker-entrypoint.sh
+    chown dockeruser:dockeruser /usr/local/bin/docker-entrypoint.sh && \
+    chown dockeruser:dockeruser /usr/local/bin/extract_attributes.py
 
 WORKDIR /var/www/html
 

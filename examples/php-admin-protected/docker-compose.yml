@@ -15,6 +15,7 @@ services:
       SHIB_HOSTNAME: "localhost:8080"
       SHIB_CONTACT: "admin@example.ch"
       SHIB_PROTECTED_PATHS: "/admin"
+      SHIB_ATTRIBUTES: "mail,givenName,surname"
       APACHE_CUSTOM_CONFIG: |
         # This could also be provided in the custom.conf file mounted below
         <Location /bob>

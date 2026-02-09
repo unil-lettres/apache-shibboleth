@@ -128,6 +128,81 @@ else
   echo "Shibboleth protection already configured. No action needed."
 fi
 
+# Configure Shibboleth attributes forwarding as HTTP headers
+if grep -q "__SHIB_HEADERS_BLOCK__" "/etc/apache2/sites-available/000-default.conf"; then
+  
+  # Determine which attributes to forward
+  ATTRIBUTES_TO_FORWARD=""
+  
+  # Priority 1: SHIB_ATTRIBUTES environment variable (if set, even if empty)
+  if [ -n "${SHIB_ATTRIBUTES+x}" ]; then
+    ATTRIBUTES_TO_FORWARD="$SHIB_ATTRIBUTES"
+    if [ -z "$SHIB_ATTRIBUTES" ]; then
+      echo "SHIB_ATTRIBUTES is explicitly set to empty - no attributes will be forwarded."
+    else
+      echo "Using manually configured SHIB_ATTRIBUTES: $SHIB_ATTRIBUTES"
+    fi
+  
+  # Priority 2: Auto-detection from metadata (if SHIB_RESOURCE_ID is set)
+  elif [ -n "$SHIB_RESOURCE_ID" ]; then
+    echo "SHIB_RESOURCE_ID is set to $SHIB_RESOURCE_ID - attempting auto-detection..."
+    
+    # Run Python script to extract attributes
+    ATTRIBUTES_TO_FORWARD=$(/usr/local/bin/extract_attributes.py "$SHIB_RESOURCE_ID" "/etc/shibboleth/attribute-map.xml" 2>&1)
+    EXTRACT_EXIT_CODE=$?
+    
+    if [ $EXTRACT_EXIT_CODE -eq 0 ]; then
+      if [ -n "$ATTRIBUTES_TO_FORWARD" ]; then
+        echo "Auto-detected attributes: $ATTRIBUTES_TO_FORWARD"
+      else
+        echo "WARNING: No attributes could be auto-detected from metadata."
+      fi
+    else
+      echo "ERROR: Failed to extract attributes from metadata."
+      echo "$ATTRIBUTES_TO_FORWARD" >&2
+      ATTRIBUTES_TO_FORWARD=""
+    fi
+  
+  # Priority 3: No configuration - no attributes forwarded
+  else
+    echo "Neither SHIB_ATTRIBUTES nor SHIB_RESOURCE_ID is set - no attributes will be forwarded."
+    echo "Set SHIB_RESOURCE_ID for auto-detection or SHIB_ATTRIBUTES for manual configuration."
+  fi
+  
+  # Generate RequestHeader directives
+  if [ -z "$ATTRIBUTES_TO_FORWARD" ]; then
+    echo "No Shibboleth attributes will be forwarded as HTTP headers."
+    # Remove the placeholder
+    sed -i "/__SHIB_HEADERS_BLOCK__/d" "/etc/apache2/sites-available/000-default.conf"
+  else
+    # Generate RequestHeader directives for each attribute
+    HEADER_DIRECTIVES=""
+    IFS=',' read -ra ATTRS <<< "$ATTRIBUTES_TO_FORWARD"
+    for attr in "${ATTRS[@]}"; do
+      # Trim whitespace
+      attr=$(echo "$attr" | xargs)
+      
+      # Convert attribute name to header format (replace underscores and hyphens)
+      # Example: persistent-id becomes X-Shib-Persistent-Id
+      header_name=$(echo "$attr" | sed 's/-\([a-z]\)/\U\1/g' | sed 's/_\([a-z]\)/\U\1/g' | sed 's/^\([a-z]\)/\U\1/')
+      
+      HEADER_DIRECTIVES+="    RequestHeader set X-Shib-${header_name} %{${attr}}e env=${attr}\n"
+    done
+    
+    # Replace placeholder with generated directives
+    awk -v headers="$HEADER_DIRECTIVES" '{
+      if ($0 ~ /__SHIB_HEADERS_BLOCK__/) {
+        printf "%s", headers
+      } else {
+        print $0
+      }
+    }' "/etc/apache2/sites-available/000-default.conf" > /tmp/apache-headers.tmp
+    mv /tmp/apache-headers.tmp "/etc/apache2/sites-available/000-default.conf"
+  fi
+else
+  echo "Shibboleth headers already configured. No action needed."
+fi
+
 # Configure custom Apache directives from environment variable
 if [ -n "$APACHE_CUSTOM_CONFIG" ]; then
   echo "Applying custom Apache configuration from APACHE_CUSTOM_CONFIG..."
