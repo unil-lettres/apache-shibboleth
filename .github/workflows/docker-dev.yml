@@ -1,0 +1,54 @@
+name: docker
+on:
+  push:
+    branches:
+      - "development"
+permissions: read-all
+
+jobs:
+  build:
+    name: Build app (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - { arch: linux/amd64, os: ubuntu-latest }
+          - { arch: linux/arm64, os: ubuntu-24.04-arm }
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build image
+        uses: unil-lettres/actions/docker-build@main
+        with:
+          dockerfile: ./Dockerfile
+          platform: ${{ matrix.arch }}
+          image_repository: ${{ vars.DOCKERHUB_REPOSITORY }}
+          name_prefix: http
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  merge-dev:
+    name: Merge Dev
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: development
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Merge digests into manifest
+        uses: 'unil-lettres/actions/docker-merge@main'
+        with:
+          image_repository: ${{ vars.DOCKERHUB_REPOSITORY }}
+          tag: dev-latest
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
