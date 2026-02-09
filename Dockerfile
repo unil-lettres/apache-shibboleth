@@ -2,8 +2,10 @@ FROM debian:trixie-slim
 
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
-ENV TZ=Europe/Zurich
 ENV SHIBBOLETH_VERSION=3.4
+
+ARG TZ=Europe/Zurich
+ENV TZ=${TZ}
 
 # Update repositories & install additional packages
 # Custom Apache2 repo not feasible: libapache2-mod-shib requires Debian's Apache2 binary compatibility
