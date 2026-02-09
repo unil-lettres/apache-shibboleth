@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Build image
-        uses: unil-lettres/actions/docker-build@main
+        uses: ./.github/actions/docker-build-digest
         with:
           dockerfile: ./Dockerfile
           platform: ${{ matrix.arch }}
