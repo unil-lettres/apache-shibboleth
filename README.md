@@ -221,6 +221,17 @@ For a complete list of SWITCH AAI attributes, see the [SWITCH AAI Attributes Doc
 SHIB_ATTRIBUTES: ""  # Empty string = no attributes forwarded
 ```
 
+## Docker images
+
+GitHub Actions workflows generate Docker image tags based on these events:
+- Push to `development`: `dev-latest`
+- Push to `main`: `latest`
+- Push a git tag: `vX.Y.Z` (immutable)
+
+Weekly cron jobs:
+- Create an updated production candidate: `vX.Y.Z-<sha>-<timestamp>` (immutable, from git tag)
+
+
 ## Custom Apache Configuration Examples
 
 You can find complete examples for `docker-compose` and `Kubernetes` in examples folder.
