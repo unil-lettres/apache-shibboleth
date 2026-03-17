@@ -20,9 +20,10 @@ jobs:
           - { arch: linux/arm64, os: ubuntu-24.04-arm }
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
-          ref: 'main'
+          ref: main
 
       - name: Build image
         uses: unil-lettres/actions/docker-build@main
@@ -40,7 +41,8 @@ jobs:
     needs: [build]
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           ref: main
 
@@ -63,7 +65,7 @@ jobs:
           ref: main
 
       - name: Update description
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
