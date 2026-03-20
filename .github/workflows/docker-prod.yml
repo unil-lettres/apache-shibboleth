@@ -1,7 +1,8 @@
 name: docker
 on:
   schedule:
-    - cron: '0 0 * * 1'  # Every Monday at midnight
+    - cron: '0 0 * * 1' # Every Monday at midnight
+      timezone: "Europe/Zurich"
   push:
     branches:
       - "main"
