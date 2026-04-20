@@ -38,8 +38,19 @@ if [ -n "$SHIB_HOSTNAME" ] && [ -n "$SHIB_CONTACT" ]; then
   # Check if certificates are provided via environment variables
   elif [[ -n "$SHIB_SP_KEY" && -n "$SHIB_SP_CERT" ]]; then
     echo "Using Shibboleth certificates from environment variables..."
-    echo "$SHIB_SP_KEY" > /var/lib/shibboleth/sp-key.pem
-    echo "$SHIB_SP_CERT" > /var/lib/shibboleth/sp-cert.pem
+    # Check if the provided values are plaintext PEM or base64-encoded, and write them to files accordingly
+    if [[ "$SHIB_SP_KEY" == *"-----BEGIN"* ]]; then
+      printf '%s\n' "$SHIB_SP_KEY" > /var/lib/shibboleth/sp-key.pem
+    else
+      echo "Detected base64-encoded SHIB_SP_KEY, decoding..."
+      printf '%s' "$SHIB_SP_KEY" | base64 -d > /var/lib/shibboleth/sp-key.pem
+    fi
+    if [[ "$SHIB_SP_CERT" == *"-----BEGIN"* ]]; then
+      printf '%s\n' "$SHIB_SP_CERT" > /var/lib/shibboleth/sp-cert.pem
+    else
+      echo "Detected base64-encoded SHIB_SP_CERT, decoding..."
+      printf '%s' "$SHIB_SP_CERT" | base64 -d > /var/lib/shibboleth/sp-cert.pem
+    fi
     chmod 640 /var/lib/shibboleth/sp-key.pem
     chmod 644 /var/lib/shibboleth/sp-cert.pem
     echo "Certificates written from environment variables and permissions adjusted."

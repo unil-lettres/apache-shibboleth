@@ -58,8 +58,8 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 | `SHIB_RESOURCE_ID` | No | - | AAI Resource Registry ID for automatic attribute detection from metadata (e.g., `12731`). See [Shibboleth Attributes](#shibboleth-attributes). |
 | `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). Overrides auto-detection. Set to `""` to disable. See [Shibboleth Attributes](#shibboleth-attributes). |
 | `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`) |
-| `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones |
-| `SHIB_SP_CERT` | No | - | Content of existing Shibboleth public certificate (sp-cert.pem) to use instead of generating new ones |
+| `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded. |
+| `SHIB_SP_CERT` | No | - | Content of existing Shibboleth public certificate (sp-cert.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded. |
 | `APACHE_CUSTOM_CONFIG` | No | - | Custom Apache directives for config |
 
 > **Note:** Environment variables are complementary and can be used together, including with custom Apache configuration files.
@@ -118,11 +118,11 @@ Certificates are used to authenticate with the SAML Identity Provider (IdP). If 
 
 **Certificate management:**
 
-You can provide existing certificates via environment variables `SHIB_SP_KEY` and `SHIB_SP_CERT` or let the container auto-generate new certificates on startup.
+You can provide existing certificates via environment variables `SHIB_SP_KEY` and `SHIB_SP_CERT` or let the container auto-generate new certificates on startup. These variables accept either **plain text** or **base64-encoded** strings.
 
 If you generate certificates on startup, **you must** persist them with a volume mount to `/var/lib/shibboleth/`.
 
-**.env example with existing certificates:**
+**.env example with existing certificates (plain text):**
 ```bash
 SHIB_SP_KEY="-----BEGIN PRIVATE KEY-----
 [Your private key content here]
@@ -131,6 +131,12 @@ SHIB_SP_KEY="-----BEGIN PRIVATE KEY-----
 SHIB_SP_CERT="-----BEGIN CERTIFICATE-----
 [Your certificate content here]
 -----END CERTIFICATE-----"
+```
+
+**.env example with existing certificates (base64 encoded):**
+```bash
+SHIB_SP_KEY="LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCllvdXIgcHJpdmF0ZSBrZXk...="
+SHIB_SP_CERT="LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCllvdXIgY2VydGlmaWNhdGU...="
 ```
 
 **docker-compose.yml example with volume persistence:**
