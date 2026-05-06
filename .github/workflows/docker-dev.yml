@@ -50,7 +50,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge digests into manifest
-        uses: 'unil-lettres/actions/docker-merge@main'
+        uses: unil-lettres/actions/docker-merge@main
         with:
           image_repository: ${{ vars.DOCKERHUB_REPOSITORY }}
           tag: dev-latest
