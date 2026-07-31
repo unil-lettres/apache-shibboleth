@@ -166,10 +166,27 @@ Shibboleth attributes received from the Identity Provider (IdP) are automaticall
 
 The attribute name is transformed to create the HTTP header name:
 - Attribute: `mail` → Header: `X-Shib-Mail`
-- Attribute: `givenName` → Header: `X-Shib-Givenname`
+- Attribute: `givenName` → Header: `X-Shib-GivenName`
 - Attribute: `persistent-id` → Header: `X-Shib-PersistentId`
 
 The transformation capitalizes the first letter and converts hyphens/underscores followed by lowercase letters to uppercase.
+
+### Header Trust
+
+Your backend authenticates users by trusting these headers, so they must be impossible to forge. Two conditions:
+
+1. **The proxy strips them.** Each forwarded attribute is generated as a pair of directives:
+
+   ```apache
+   RequestHeader unset X-Shib-Mail
+   RequestHeader set X-Shib-Mail %{mail}e env=mail
+   ```
+
+   The `unset` matters: `set` only overwrites the header when the attribute is present in the session, so on an unprotected path — or for an attribute the IdP did not release — a header forged by the client would otherwise reach your backend untouched.
+
+2. **Your backend is only reachable through the proxy.** Publish no port for it (internal Docker network, or a `ClusterIP` Service in Kubernetes). Otherwise anyone can call it directly with forged headers and bypass Shibboleth entirely.
+
+> **Note:** only the headers this image sets are cleared. Read exactly the attributes you configured in `SHIB_ATTRIBUTES` — a backend reading an `X-Shib-*` header that is not forwarded is reading client input.
 
 #### Recommended Configuration
 

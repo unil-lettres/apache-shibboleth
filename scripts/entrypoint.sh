@@ -181,35 +181,39 @@ if grep -q "__SHIB_HEADERS_BLOCK__" "/etc/apache2/sites-available/000-default.co
   fi
   
   # Generate RequestHeader directives
+  HEADER_DIRECTIVES=""
+
   if [ -z "$ATTRIBUTES_TO_FORWARD" ]; then
     echo "No Shibboleth attributes will be forwarded as HTTP headers."
-    # Remove the placeholder
-    sed -i "/__SHIB_HEADERS_BLOCK__/d" "/etc/apache2/sites-available/000-default.conf"
   else
     # Generate RequestHeader directives for each attribute
-    HEADER_DIRECTIVES=""
     IFS=',' read -ra ATTRS <<< "$ATTRIBUTES_TO_FORWARD"
     for attr in "${ATTRS[@]}"; do
       # Trim whitespace
       attr=$(echo "$attr" | xargs)
-      
+
       # Convert attribute name to header format (replace underscores and hyphens)
-      # Example: persistent-id becomes X-Shib-Persistent-Id
+      # Example: persistent-id becomes X-Shib-PersistentId
       header_name=$(echo "$attr" | sed 's/-\([a-z]\)/\U\1/g' | sed 's/_\([a-z]\)/\U\1/g' | sed 's/^\([a-z]\)/\U\1/')
-      
+
+      # "set" only overwrites the header when the attribute is in the session:
+      # on an unprotected path, or when the IdP does not release the attribute,
+      # a header forged by the client would otherwise reach the backend
+      # untouched. "unset" first makes the header impossible to spoof.
+      HEADER_DIRECTIVES+="    RequestHeader unset X-Shib-${header_name}\n"
       HEADER_DIRECTIVES+="    RequestHeader set X-Shib-${header_name} %{${attr}}e env=${attr}\n"
     done
-    
-    # Replace placeholder with generated directives
-    awk -v headers="$HEADER_DIRECTIVES" '{
-      if ($0 ~ /__SHIB_HEADERS_BLOCK__/) {
-        printf "%s", headers
-      } else {
-        print $0
-      }
-    }' "/etc/apache2/sites-available/000-default.conf" > /tmp/apache-headers.tmp
-    mv /tmp/apache-headers.tmp "/etc/apache2/sites-available/000-default.conf"
   fi
+
+  # Replace placeholder with generated directives
+  awk -v headers="$HEADER_DIRECTIVES" '{
+    if ($0 ~ /__SHIB_HEADERS_BLOCK__/) {
+      printf "%s", headers
+    } else {
+      print $0
+    }
+  }' "/etc/apache2/sites-available/000-default.conf" > /tmp/apache-headers.tmp
+  mv /tmp/apache-headers.tmp "/etc/apache2/sites-available/000-default.conf"
 else
   echo "Shibboleth headers already configured. No action needed."
 fi
