@@ -55,8 +55,7 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 | `SHIB_ENTITY_ID` | No | - | If entityID is not the same as the hostname (when multiple locations registererd for the same entityID). You must only specify the `host` part of the ID. |
 | `SHIB_PROTECTED_PATHS` | No | `/` | Paths to protect with Shibboleth (comma-separated). Set to empty string `""` to disable protection and configure manually. |
 | `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`) |
-| `SHIB_RESOURCE_ID` | No | - | AAI Resource Registry ID for automatic attribute detection from metadata (e.g., `12731`). See [Shibboleth Attributes](#shibboleth-attributes). |
-| `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). **Your backend must read only these.** Overrides auto-detection. Set to `""` to disable. See [Shibboleth Attributes](#shibboleth-attributes). |
+| `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). **Your backend must read only these.** See [Shibboleth Attributes](#shibboleth-attributes). |
 | `SHIB_SESSION_PROPERTIES` | No | `Shib-Identity-Provider,Shib-Authentication-Instant,Shib-AuthnContext-Class` | Session properties to forward as HTTP headers (comma-separated). **Your backend must read only these.** Set to `""` to disable. See [Session Properties](#session-properties). |
 | `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`) |
 | `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded. |
@@ -222,53 +221,23 @@ Your backend authenticates users by trusting these headers, so they must be impo
 
 #### Recommended Configuration
 
-**Best practice:** Only forward the attributes your application actually needs. This minimizes header overhead and improves security by limiting data exposure.
-
-A good starting point for most applications:
-
-```yaml
-SHIB_ATTRIBUTES: "mail,givenName,surname"
-```
-
-**Tip:** If unsure which attributes are available, temporarily use `SHIB_RESOURCE_ID` with your Resource Registry ID to see all available attributes in the startup logs, then switch to `SHIB_ATTRIBUTES` with only the ones you need.
-
-#### Automatic Attribute Detection
-
-Set `SHIB_RESOURCE_ID` to your AAI Resource Registry ID to enable automatic attribute detection from your metadata.
-
-```yaml
-SHIB_RESOURCE_ID: "12731"  # Your resource ID from rr.aai.switch.ch
-```
-
-The container will attempt to fetch and analyze your metadata at startup. Detected attributes are displayed in the startup logs. All detected attributes will be forwarded. If an attribute is not found in the map file, it will be ignored. If detection fails, no attributes will be forwarded.
-
-**Finding your Resource ID:**
-1. Log in to [AAI Resource Registry](https://rr.aai.switch.ch/)
-2. Navigate to your Service Provider resource
-3. The resource ID is in the URL (e.g., `12731`)
-
-#### Manual Configuration
-
-You can explicitly specify which attributes to forward:
+**Best practice:** Forward only the attributes your application actually needs. Every extra attribute is one more piece of personal data crossing to your backend, for no benefit.
 
 ```yaml
 SHIB_ATTRIBUTES: "mail,givenName,surname,uniqueID"
 ```
 
+There is no auto-detection: attributes are listed by hand, deliberately. The list defines both what your backend receives *and* what it is allowed to trust, so it has to be a decision, not a discovery — an attribute that appears silently because the metadata changed is an attribute nobody reviewed.
+
 **Important:** Use the attribute names as defined in `/etc/shibboleth/attribute-map.xml` (not the FriendlyName from metadata).
 
-**Tip:** To see which attributes are configured in your metadata, temporarily set `SHIB_RESOURCE_ID` instead of `SHIB_ATTRIBUTES`. The startup logs will display all available attributes, helping you choose which ones to configure manually.
+**Finding the attributes available to you:**
 
-**Attribute availability:** Not all attributes are always available. Availability depends on:
-- Your organization's Identity Provider configuration
-- The attributes your SP is allowed to receive (configured in AAI Resource Registry metadata: `https://rr.aai.switch.ch/entity/resource/<RESOURCE_ID>/metadata.xml`)
-- User consent for attribute release
+1. After authenticating, visit `https://your-domain.ch/Shibboleth.sso/Session` - it lists the attributes actually received for the current session, under the names to use here
+2. Your SP metadata declares what you may receive: `https://rr.aai.switch.ch/entity/resource/<RESOURCE_ID>/metadata.xml`
+3. For the complete federation catalog, see the [SWITCH AAI Attributes Documentation](https://help.switch.ch/aai/support/documents/attributes/)
 
-To verify which attributes are actually available, visit `https://your-domain.ch/Shibboleth.sso/Session` after authenticating.
-
-For a complete list of SWITCH AAI attributes, see the [SWITCH AAI Attributes Documentation](https://help.switch.ch/aai/support/documents/attributes/).
-
-**Note:** `SHIB_ATTRIBUTES` takes precedence over auto-detection. Use it when you need specific attributes different from what's in the metadata.
+**Attribute availability:** Not all attributes are always available. Availability depends on your organization's Identity Provider configuration, on what your SP is allowed to receive, and on user consent for attribute release. An attribute that is listed but never released simply yields no header - your backend must handle it being absent.
 
 #### Disable Attribute Forwarding
 
