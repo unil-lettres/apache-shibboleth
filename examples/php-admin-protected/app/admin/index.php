@@ -33,6 +33,10 @@
                 <th>Value</th>
             </tr>
             <tr>
+                <td>Identity Provider (session property)</td>
+                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_IDENTITY_PROVIDER'] ?? 'Not set') ?></td>
+            </tr>
+            <tr>
                 <td>Email (mail)</td>
                 <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_MAIL'] ?? 'Not set') ?></td>
             </tr>
@@ -50,7 +54,7 @@
             </tr>
         </table>
 
-        <p>These are the attributes listed in <code>SHIB_ATTRIBUTES</code>. Only those are set - and stripped from incoming requests - by the proxy.</p>
+        <p>These are the attributes listed in <code>SHIB_ATTRIBUTES</code>, plus the session properties of <code>SHIB_SESSION_PROPERTIES</code>. Only those are set - and stripped from incoming requests - by the proxy.</p>
         
         <h3 style="margin-top: 20px;">All X-Shib-* headers as received:</h3>
         <p>Raw dump, including any header the client sent itself. Only the attributes above are guaranteed to come from Shibboleth.</p>

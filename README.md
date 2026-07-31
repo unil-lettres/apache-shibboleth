@@ -56,11 +56,14 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 | `SHIB_PROTECTED_PATHS` | No | `/` | Paths to protect with Shibboleth (comma-separated). Set to empty string `""` to disable protection and configure manually. |
 | `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`) |
 | `SHIB_RESOURCE_ID` | No | - | AAI Resource Registry ID for automatic attribute detection from metadata (e.g., `12731`). See [Shibboleth Attributes](#shibboleth-attributes). |
-| `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). Overrides auto-detection. Set to `""` to disable. See [Shibboleth Attributes](#shibboleth-attributes). |
+| `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). **Your backend must read only these.** Overrides auto-detection. Set to `""` to disable. See [Shibboleth Attributes](#shibboleth-attributes). |
+| `SHIB_SESSION_PROPERTIES` | No | `Shib-Identity-Provider,Shib-Authentication-Instant,Shib-AuthnContext-Class` | Session properties to forward as HTTP headers (comma-separated). **Your backend must read only these.** Set to `""` to disable. See [Session Properties](#session-properties). |
 | `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`) |
 | `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded. |
 | `SHIB_SP_CERT` | No | - | Content of existing Shibboleth public certificate (sp-cert.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded. |
 | `APACHE_CUSTOM_CONFIG` | No | - | Custom Apache directives for config |
+
+> **Warning:** your backend must read **only** the `X-Shib-*` headers derived from `SHIB_ATTRIBUTES` and `SHIB_SESSION_PROPERTIES`. Those are the only ones this image clears from incoming requests, and therefore the only ones a client cannot forge. Any other `X-Shib-*` header is client input. See [Header Trust](#header-trust).
 
 > **Note:** Environment variables are complementary and can be used together, including with custom Apache configuration files.
 
@@ -160,7 +163,7 @@ The Apache proxy listens on **port 8080** (HTTP). This container runs is designe
 
 ### Shibboleth Attributes
 
-Shibboleth attributes received from the Identity Provider (IdP) are automatically forwarded to your backend as HTTP headers with the `X-Shib-` prefix.
+Shibboleth attributes received from the Identity Provider (IdP) are forwarded to your backend as HTTP headers with the `X-Shib-` prefix. **Only the attributes you list in `SHIB_ATTRIBUTES` are forwarded, and only those may be trusted by your backend** — see [Header Trust](#header-trust).
 
 **Header naming convention:**
 
@@ -171,11 +174,33 @@ The attribute name is transformed to create the HTTP header name:
 
 The transformation capitalizes the first letter and converts hyphens/underscores followed by lowercase letters to uppercase.
 
+### Session Properties
+
+Beyond the attributes released by the IdP, `mod_shib` exposes properties describing the session itself. They are configured separately, with `SHIB_SESSION_PROPERTIES`. **Only the properties you list in `SHIB_SESSION_PROPERTIES` are forwarded, and only those may be trusted by your backend** — see [Header Trust](#header-trust).
+
+Their name already starts with `Shib-`, so the header is simply the property prefixed with `X-`:
+- Property: `Shib-Identity-Provider` → Header: `X-Shib-Identity-Provider`
+
+**Forwarded by default:**
+
+| Property | Content |
+|----------|---------|
+| `Shib-Identity-Provider` | entityID of the IdP the user authenticated against |
+| `Shib-Authentication-Instant` | Timestamp of the authentication |
+| `Shib-AuthnContext-Class` | AuthnContextClassRef, e.g. to detect MFA |
+
+**Also available**, if you add them to `SHIB_SESSION_PROPERTIES`: `Shib-Session-Expires`, `Shib-Session-Index` (needed for Single Logout), `Shib-Session-ID`, `Shib-Session-Inactivity`, `Shib-AuthnContext-Decl`, `Shib-Application-ID`, `Shib-Handler`. Listing one is what makes it usable: a property left out is never set, so its header stays forgeable.
+
+```yaml
+SHIB_SESSION_PROPERTIES: "Shib-Identity-Provider,Shib-Session-Index"
+SHIB_SESSION_PROPERTIES: ""   # Forward none
+```
+
 ### Header Trust
 
-Your backend authenticates users by trusting these headers, so they must be impossible to forge. Two conditions:
+Your backend authenticates users by trusting these headers, so they must be impossible to forge. Three conditions:
 
-1. **The proxy strips them.** Each forwarded attribute is generated as a pair of directives:
+1. **The proxy strips them.** Each forwarded attribute or session property is generated as a pair of directives:
 
    ```apache
    RequestHeader unset X-Shib-Mail
@@ -186,7 +211,14 @@ Your backend authenticates users by trusting these headers, so they must be impo
 
 2. **Your backend is only reachable through the proxy.** Publish no port for it (internal Docker network, or a `ClusterIP` Service in Kubernetes). Otherwise anyone can call it directly with forged headers and bypass Shibboleth entirely.
 
-> **Note:** only the headers this image sets are cleared. Read exactly the attributes you configured in `SHIB_ATTRIBUTES` — a backend reading an `X-Shib-*` header that is not forwarded is reading client input.
+3. **Your backend reads only what is forwarded.** The image clears exactly the headers it sets — those derived from `SHIB_ATTRIBUTES` and `SHIB_SESSION_PROPERTIES`, and nothing else. There is no wildcard: an `X-Shib-*` header you did not configure is neither set nor cleared, so it arrives exactly as the client sent it.
+
+   ```php
+   $_SERVER['HTTP_X_SHIB_MAIL']      // configured in SHIB_ATTRIBUTES → trustworthy
+   $_SERVER['HTTP_X_SHIB_EPPN']      // not configured → forged by anyone
+   ```
+
+   The failure is silent and reads like working code: no error, no empty value, just an attacker-chosen identity. Before trusting a header in your backend, check that the matching attribute or property is in your configuration.
 
 #### Recommended Configuration
 

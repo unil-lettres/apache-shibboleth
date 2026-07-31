@@ -205,6 +205,29 @@ if grep -q "__SHIB_HEADERS_BLOCK__" "/etc/apache2/sites-available/000-default.co
     done
   fi
 
+  # Session properties (Shib-Identity-Provider, Shib-Authentication-Instant...)
+  # are not attributes from attribute-map.xml: mod_shib exports them for every
+  # authenticated session. Their name already starts with "Shib-", so the
+  # header is the property prefixed with "X-" (X-Shib-Identity-Provider).
+  # Only set default if variable is unset (not if explicitly set to empty string)
+  if [ -z "${SHIB_SESSION_PROPERTIES+x}" ]; then
+    SHIB_SESSION_PROPERTIES="Shib-Identity-Provider,Shib-Authentication-Instant,Shib-AuthnContext-Class"
+  fi
+
+  if [ -z "$SHIB_SESSION_PROPERTIES" ]; then
+    echo "No Shibboleth session properties will be forwarded as HTTP headers."
+  else
+    echo "Forwarding Shibboleth session properties: $SHIB_SESSION_PROPERTIES"
+    IFS=',' read -ra PROPS <<< "$SHIB_SESSION_PROPERTIES"
+    for prop in "${PROPS[@]}"; do
+      # Trim whitespace
+      prop=$(echo "$prop" | xargs)
+
+      HEADER_DIRECTIVES+="    RequestHeader unset X-${prop}\n"
+      HEADER_DIRECTIVES+="    RequestHeader set X-${prop} %{${prop}}e env=${prop}\n"
+    done
+  fi
+
   # Replace placeholder with generated directives
   awk -v headers="$HEADER_DIRECTIVES" '{
     if ($0 ~ /__SHIB_HEADERS_BLOCK__/) {
