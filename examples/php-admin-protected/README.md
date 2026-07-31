@@ -26,10 +26,10 @@ client → apache-shibboleth (SAML, port 8080) → app (php:8.4-apache, port 80)
 ```
 
 1. **`apache-shibboleth`** authenticates and proxies **everything** to `app` - it never touches your application files
-2. **`app`** serves the PHP pages and their static assets
-3. **Public access**: `/` is accessible without authentication
-4. **Protected access**: `/admin` requires Shibboleth authentication, `/bob` requires uniqueID `bob@domain.ch`
-5. **Attributes**: forwarded to `app` as `X-Shib-*` HTTP headers
+1. **`app`** serves the PHP pages and their static assets
+1. **Public access**: `/` is accessible without authentication
+1. **Protected access**: `/admin` requires Shibboleth authentication, `/bob` requires uniqueID `bob@domain.ch`
+1. **Attributes**: forwarded to `app` as `X-Shib-*` HTTP headers
 
 The `app` container publishes **no port**: it must only be reachable through the proxy, otherwise anyone could call it directly with forged `X-Shib-*` headers and bypass authentication entirely.
 
@@ -60,5 +60,5 @@ The only development-specific part is the `./app` bind mount on the `app` servic
 For real Shibboleth authentication to work, you need:
 
 1. **Valid hostname**: Replace `localhost:8080` with a real domain
-2. **SP Registration**: Register your Service Provider in [SWITCHaai Resource Registry](https://rr.aai.switch.ch/)
-3. **SSL Certificate**: SWITCHaai requires HTTPS (use reverse proxy with SSL in front)
+1. **SP Registration**: Register your Service Provider in [SWITCHaai Resource Registry](https://rr.aai.switch.ch/)
+1. **SSL Certificate**: SWITCHaai requires HTTPS (use reverse proxy with SSL in front)

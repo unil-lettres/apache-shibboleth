@@ -14,10 +14,10 @@ Only the **login endpoint** needs Shibboleth protection. The rest of your site r
 
 **Flow:**
 1. User visits public pages → no authentication required
-2. User clicks "Login" → app redirects to Shibboleth-protected endpoint (e.g., `/aai`, `/login`)
-3. Shibboleth authenticates → redirects back with user attributes in `X-Shib-*` headers
-4. **Backend reads headers** to create/update user record and establish session
-5. User navigates → **backend uses its own session** (cookies, JWT, etc.)
+1. User clicks "Login" → app redirects to Shibboleth-protected endpoint (e.g., `/aai`, `/login`)
+1. Shibboleth authenticates → redirects back with user attributes in `X-Shib-*` headers
+1. **Backend reads headers** to create/update user record and establish session
+1. User navigates → **backend uses its own session** (cookies, JWT, etc.)
 
 **Configuration:**
 ```yaml
@@ -52,7 +52,7 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 |----------|----------|---------|-------------|
 | `SHIB_HOSTNAME` | Yes | - | Your domain name |
 | `SHIB_CONTACT` | Yes | - | Contact email |
-| `SHIB_ENTITY_ID` | No | - | If entityID is not the same as the hostname (when multiple locations registererd for the same entityID). You must only specify the `host` part of the ID. |
+| `SHIB_ENTITY_ID` | No | - | If entityID is not the same as the hostname (when multiple locations registered for the same entityID). You must only specify the `host` part of the ID. |
 | `SHIB_PROTECTED_PATHS` | No | `/` | Paths to protect with Shibboleth (comma-separated). Set to empty string `""` to disable protection and configure manually. |
 | `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`) |
 | `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). **Your backend must read only these.** See [Shibboleth Attributes](#shibboleth-attributes). |
@@ -68,26 +68,20 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 
 > **Important:** Shibboleth and Apache configurations are generated **only on first startup**. If you modify environment variables, you will need to recreate the container.
 
-> **Note:** `SHIB_ALLOWED_USERS` applies globally to **all** paths in `SHIB_PROTECTED_PATHS`. You cannot configure different users for different paths. If you need per-path authorization, see [Advanced Apache Configucation](#advanced-apache-configuration-optional) to define specific `<Location>` blocks and set `SHIB_PROTECTED_PATHS=""` to disable automatic protection.
+> **Note:** `SHIB_ALLOWED_USERS` applies globally to **all** paths in `SHIB_PROTECTED_PATHS`. You cannot configure different users for different paths. If you need per-path authorization, see [Advanced Apache Configuration](#advanced-apache-configuration) to define specific `<Location>` blocks and set `SHIB_PROTECTED_PATHS=""` to disable automatic protection.
 
 ### Configuration Methods
 
-This image does **not** provide a default proxy behavior. You **must** provide your own Apache configuration.
+This image does **not** provide a default proxy behavior. You **must** provide your own Apache configuration, and it **must** define where Apache forwards requests — see [Custom Apache Configuration](#custom-apache-configuration).
 
 **Two methods:**
 
 1. **`APACHE_CUSTOM_CONFIG` environment variable** (recommended for Kubernetes)
-2. **Mount configuration files to `/etc/apache2/vhost.d/`** (recommended for Docker Compose)
+1. **Mount configuration files to `/etc/apache2/vhost.d/`** (recommended for Docker Compose)
 
-Both methods can be used together. See `examples/php-admin-protected/docker-compose.yml` for an example on how to use it.
+Both methods can be used together. See [examples/php-admin-protected/docker-compose.yml](examples/php-admin-protected/docker-compose.yml) for an example of both.
 
-#### Proxy Configuration (Required)
-
-Your custom configuration **must** define where Apache forwards requests.
-
-See [Custom Apache Configuration](#custom-apache-configuration) for the expected setup.
-
-#### Advanced Apache Configuration (Optional)
+#### Advanced Apache Configuration
 
 You can add any Apache directives for advanced configurations.
 
@@ -98,13 +92,6 @@ You can add any Apache directives for advanced configurations.
     AuthType shibboleth
     ShibRequestSetting requireSession true
     Require shib-attr uniqueID secured@domain.ch
-</Location>
-
-<Location /admin>
-    # Shibboleth with specific user restriction
-    AuthType shibboleth
-    ShibRequestSetting requireSession true
-    Require shib-attr uniqueID admin@domain.ch
 </Location>
 ```
 
@@ -158,7 +145,7 @@ When updating certificates (e.g., for expiration), follow the [SWITCH certificat
 
 ### Ports
 
-The Apache proxy listens on **port 8080** (HTTP). This container runs is designed to run behind a TLS termination proxy that handles HTTPS.
+The Apache proxy listens on **port 8080** (HTTP). This container is designed to run behind a TLS termination proxy that handles HTTPS.
 
 ### Shibboleth Attributes
 
@@ -173,9 +160,27 @@ The attribute name is transformed to create the HTTP header name:
 
 The transformation capitalizes the first letter and converts hyphens/underscores followed by lowercase letters to uppercase.
 
+**Choosing what to forward:** forward only the attributes your application actually needs. Every extra attribute is one more piece of personal data crossing to your backend, for no benefit.
+
+```yaml
+SHIB_ATTRIBUTES: "mail,givenName,surname,uniqueID"
+```
+
+Attributes are listed by hand, deliberately: the list defines both what your backend receives *and* what it is allowed to trust. Widening it is a decision to take and review, never something that should happen on its own.
+
+**Important:** Use the attribute names as defined in `/etc/shibboleth/attribute-map.xml` (not the FriendlyName from metadata).
+
+**Finding the attributes available to you:**
+
+1. After authenticating, visit `https://your-domain.ch/Shibboleth.sso/Session` - it lists the attributes actually received for the current session, under the names to use here
+1. Your SP metadata declares what you may receive: `https://rr.aai.switch.ch/entity/resource/<RESOURCE_ID>/metadata.xml`
+1. For the complete federation catalog, see the [SWITCH AAI Attributes Documentation](https://help.switch.ch/aai/support/documents/attributes/)
+
+**Attribute availability:** Not all attributes are always available. Availability depends on your organization's Identity Provider configuration, on what your SP is allowed to receive, and on user consent for attribute release. An attribute that is listed but never released simply yields no header - your backend must handle it being absent.
+
 ### Session Properties
 
-Beyond the attributes released by the IdP, `mod_shib` exposes properties describing the session itself. They are configured separately, with `SHIB_SESSION_PROPERTIES`. **Only the properties you list in `SHIB_SESSION_PROPERTIES` are forwarded, and only those may be trusted by your backend** — see [Header Trust](#header-trust).
+Beyond the attributes released by the IdP, `mod_shib` exposes properties describing the session itself. They are configured separately, with `SHIB_SESSION_PROPERTIES`.
 
 Their name already starts with `Shib-`, so the header is simply the property prefixed with `X-`:
 - Property: `Shib-Identity-Provider` → Header: `X-Shib-Identity-Provider`
@@ -208,9 +213,9 @@ Your backend authenticates users by trusting these headers, so they must be impo
 
    The `unset` matters: `set` only overwrites the header when the attribute is present in the session, so on an unprotected path — or for an attribute the IdP did not release — a header forged by the client would otherwise reach your backend untouched.
 
-2. **Your backend is only reachable through the proxy.** Publish no port for it (internal Docker network, or a `ClusterIP` Service in Kubernetes). Otherwise anyone can call it directly with forged headers and bypass Shibboleth entirely.
+1. **Your backend is only reachable through the proxy.** Publish no port for it (internal Docker network, or a `ClusterIP` Service in Kubernetes). Otherwise anyone can call it directly with forged headers and bypass Shibboleth entirely.
 
-3. **Your backend reads only what is forwarded.** The image clears exactly the headers it sets — those derived from `SHIB_ATTRIBUTES` and `SHIB_SESSION_PROPERTIES`, and nothing else. There is no wildcard: an `X-Shib-*` header you did not configure is neither set nor cleared, so it arrives exactly as the client sent it.
+1. **Your backend reads only what is forwarded.** The image clears exactly the headers it sets — those derived from `SHIB_ATTRIBUTES` and `SHIB_SESSION_PROPERTIES`, and nothing else. There is no wildcard: an `X-Shib-*` header you did not configure is neither set nor cleared, so it arrives exactly as the client sent it. DO NOT TRUST THESE HEADERS !
 
    ```php
    $_SERVER['HTTP_X_SHIB_MAIL']      // configured in SHIB_ATTRIBUTES → trustworthy
@@ -218,43 +223,6 @@ Your backend authenticates users by trusting these headers, so they must be impo
    ```
 
    The failure is silent and reads like working code: no error, no empty value, just an attacker-chosen identity. Before trusting a header in your backend, check that the matching attribute or property is in your configuration.
-
-#### Recommended Configuration
-
-**Best practice:** Forward only the attributes your application actually needs. Every extra attribute is one more piece of personal data crossing to your backend, for no benefit.
-
-```yaml
-SHIB_ATTRIBUTES: "mail,givenName,surname,uniqueID"
-```
-
-There is no auto-detection: attributes are listed by hand, deliberately. The list defines both what your backend receives *and* what it is allowed to trust, so it has to be a decision, not a discovery — an attribute that appears silently because the metadata changed is an attribute nobody reviewed.
-
-**Important:** Use the attribute names as defined in `/etc/shibboleth/attribute-map.xml` (not the FriendlyName from metadata).
-
-**Finding the attributes available to you:**
-
-1. After authenticating, visit `https://your-domain.ch/Shibboleth.sso/Session` - it lists the attributes actually received for the current session, under the names to use here
-2. Your SP metadata declares what you may receive: `https://rr.aai.switch.ch/entity/resource/<RESOURCE_ID>/metadata.xml`
-3. For the complete federation catalog, see the [SWITCH AAI Attributes Documentation](https://help.switch.ch/aai/support/documents/attributes/)
-
-**Attribute availability:** Not all attributes are always available. Availability depends on your organization's Identity Provider configuration, on what your SP is allowed to receive, and on user consent for attribute release. An attribute that is listed but never released simply yields no header - your backend must handle it being absent.
-
-#### Disable Attribute Forwarding
-
-```yaml
-SHIB_ATTRIBUTES: ""  # Empty string = no attributes forwarded
-```
-
-## Docker images
-
-GitHub Actions workflows generate Docker image tags based on these events:
-- Push to `development`: `dev-latest`
-- Push to `main`: `latest`
-- Push a git tag: `vX.Y.Z` (immutable)
-
-Weekly cron jobs:
-- Create an updated production candidate: `vX.Y.Z-<sha>-<timestamp>` (immutable, from git tag)
-
 
 ## Custom Apache Configuration
 
@@ -269,11 +237,9 @@ ProxyPass / http://backend:8080/
 ProxyPassReverse / http://backend:8080/
 ```
 
-Your backend serves both dynamic responses and static assets.
-
 Shibboleth attributes are forwarded as `X-Shib-*` headers, so the backend still knows who the user is.
 
-> **Security:** your backend must be reachable **only** through this proxy (internal Docker network / `ClusterIP` Service, no published port), otherwise the `X-Shib-*` headers can be spoofed by bypassing authentication. See [Header Trust](#header-trust).
+> **Security:** the backend must publish no port of its own — see [Header Trust](#header-trust).
 
 Other layouts are possible — Apache can serve files itself (see below), or proxy only some paths — but they require those files to be present in this container (you can extend this image and copy your static files into it), which the full proxy avoids.
 
@@ -295,6 +261,17 @@ DocumentRoot /var/www/html
 ```
 
 A complete `docker-compose` example is available in the [examples](examples/) folder.
+
+## Docker images
+
+GitHub Actions workflows generate Docker image tags based on these events:
+- Push to `development`: `dev-latest`
+- Push to `main`: `latest`
+- Push a git tag: `vX.Y.Z` (immutable)
+
+Weekly cron jobs:
+- Create an updated production candidate: `vX.Y.Z-<sha>-<timestamp>` (immutable, from git tag)
+
 
 ## Documentation
 
