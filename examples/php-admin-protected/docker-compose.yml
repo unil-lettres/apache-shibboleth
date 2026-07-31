@@ -1,11 +1,15 @@
 services:
-  php-fpm:
-    image: php:8.2-fpm
+  app:
+    # Serves the application and its static files. In production, replace this
+    # with your own image containing the code instead of the bind mount below.
+    image: php:8.4-apache
     volumes:
       - ./app:/var/www/html
+    # No published port: the application must only be reachable through the
+    # proxy, otherwise X-Shib-* headers can be forged
     networks:
       - app-network
-    container_name: apache-shibboleth-php-fpm
+    container_name: apache-shibboleth-app
 
   apache-shibboleth:
     build: ../../
@@ -15,7 +19,7 @@ services:
       SHIB_HOSTNAME: "localhost:8080"
       SHIB_CONTACT: "admin@example.ch"
       SHIB_PROTECTED_PATHS: "/admin"
-      SHIB_ATTRIBUTES: "mail,givenName,surname"
+      SHIB_ATTRIBUTES: "mail,givenName,surname,uniqueID"
       APACHE_CUSTOM_CONFIG: |
         # This could also be provided in the custom.conf file mounted below
         <Location /bob>
@@ -26,13 +30,12 @@ services:
         </Location>
     volumes:
       - ./custom.conf:/etc/apache2/vhost.d/custom.conf:ro
-      - ./app:/var/www/html
       - shibboleth-certs:/var/lib/shibboleth
       - apache-logs:/var/log/apache2
     networks:
       - app-network
     depends_on:
-      - php-fpm
+      - app
     container_name: apache-shibboleth-http
 
 volumes:

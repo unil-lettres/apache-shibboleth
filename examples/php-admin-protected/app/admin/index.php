@@ -33,32 +33,27 @@
                 <th>Value</th>
             </tr>
             <tr>
-                <td>Identity Provider</td>
-                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_IDENTITY_PROVIDER'] ?? 'Not set') ?></td>
-            </tr>
-            <tr>
                 <td>Email (mail)</td>
                 <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_MAIL'] ?? 'Not set') ?></td>
             </tr>
             <tr>
-                <td>Display Name</td>
-                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_DISPLAYNAME'] ?? 'Not set') ?></td>
-            </tr>
-            <tr>
-                <td>Given Name</td>
+                <td>Given Name (givenName)</td>
                 <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_GIVENNAME'] ?? 'Not set') ?></td>
             </tr>
             <tr>
-                <td>Surname (sn)</td>
-                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_SN'] ?? 'Not set') ?></td>
+                <td>Surname (surname)</td>
+                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_SURNAME'] ?? 'Not set') ?></td>
             </tr>
             <tr>
-                <td>EPPN</td>
-                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_EPPN'] ?? 'Not set') ?></td>
+                <td>Unique ID (uniqueID)</td>
+                <td><?= htmlspecialchars($_SERVER['HTTP_X_SHIB_UNIQUEID'] ?? 'Not set') ?></td>
             </tr>
         </table>
+
+        <p>These are the attributes listed in <code>SHIB_ATTRIBUTES</code>. Only those are set - and stripped from incoming requests - by the proxy.</p>
         
-        <h3 style="margin-top: 20px;">All Shibboleth Headers:</h3>
+        <h3 style="margin-top: 20px;">All X-Shib-* headers as received:</h3>
+        <p>Raw dump, including any header the client sent itself. Only the attributes above are guaranteed to come from Shibboleth.</p>
         <pre style="background: white; padding: 10px; border: 1px solid #ddd; overflow: auto; max-height: 300px;">
 <?php
 foreach (getallheaders() as $name => $value) {

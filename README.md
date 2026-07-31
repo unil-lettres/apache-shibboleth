@@ -68,7 +68,7 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 
 > **Note:** `SHIB_ALLOWED_USERS` applies globally to **all** paths in `SHIB_PROTECTED_PATHS`. You cannot configure different users for different paths. If you need per-path authorization, see [Advanced Apache Configucation](#advanced-apache-configuration-optional) to define specific `<Location>` blocks and set `SHIB_PROTECTED_PATHS=""` to disable automatic protection.
 
-### Custom Apache Configuration
+### Configuration Methods
 
 This image does **not** provide a default proxy behavior. You **must** provide your own Apache configuration.
 
@@ -77,13 +77,13 @@ This image does **not** provide a default proxy behavior. You **must** provide y
 1. **`APACHE_CUSTOM_CONFIG` environment variable** (recommended for Kubernetes)
 2. **Mount configuration files to `/etc/apache2/vhost.d/`** (recommended for Docker Compose)
 
-Both methods can be used together.
+Both methods can be used together. See `examples/php-admin-protected/docker-compose.yml` for an example on how to use it.
 
 #### Proxy Configuration (Required)
 
-Your custom configuration **must** define how Apache handles requests: full proxy, partial proxy, static files, FilesMatch, etc.
+Your custom configuration **must** define where Apache forwards requests.
 
-See [Custom Configuration Examples](#custom-apache-configuration-examples) for specific configurations.
+See [Custom Apache Configuration](#custom-apache-configuration) for the expected setup.
 
 #### Advanced Apache Configuration (Optional)
 
@@ -255,15 +255,28 @@ Weekly cron jobs:
 - Create an updated production candidate: `vX.Y.Z-<sha>-<timestamp>` (immutable, from git tag)
 
 
-## Custom Apache Configuration Examples
+## Custom Apache Configuration
 
-You can find complete examples for `docker-compose` and `Kubernetes` in examples folder.
+What the container does is entirely up to your configuration: it is included inside the `<VirtualHost>` (see [Configuration Methods](#configuration-methods)), so any directive Apache accepts is valid there — rewrite rules, `<Location>` blocks, headers, cache control, and so on.
 
-### Example 1: PHP-FPM (only .php files proxied)
-
-Use with PHP-FPM backend. Static files served directly, only `.php` files go to PHP-FPM.
+That said, the image is **designed to be used as a full proxy**: it terminates Shibboleth, then forwards every request to your application. Your files stay in your application image, so the same configuration works in Docker Compose and Kubernetes.
 
 **custom.conf:**
+```apache
+# Proxy everything to the backend
+ProxyPass / http://backend:8080/
+ProxyPassReverse / http://backend:8080/
+```
+
+Your backend serves both dynamic responses and static assets.
+
+Shibboleth attributes are forwarded as `X-Shib-*` headers, so the backend still knows who the user is.
+
+> **Security:** your backend must be reachable **only** through this proxy (internal Docker network / `ClusterIP` Service, no published port), otherwise the `X-Shib-*` headers can be spoofed by bypassing authentication. See [Header Trust](#header-trust).
+
+Other layouts are possible — Apache can serve files itself (see below), or proxy only some paths — but they require those files to be present in this container (you can extend this image and copy your static files into it), which the full proxy avoids.
+
+**custom.conf (Apache serving the files itself):**
 ```apache
 # Serve static files from DocumentRoot
 DocumentRoot /var/www/html
@@ -276,41 +289,11 @@ DocumentRoot /var/www/html
 
 # Only .php files go to PHP-FPM
 <FilesMatch \.php$>
-    SetHandler "proxy:fcgi://php-fpm:9000/var/www/html"
+    SetHandler "proxy:fcgi://php-fpm:9000/"
 </FilesMatch>
 ```
 
-
-### Example 2: Partial Proxy (Ruby, Python, Node API + static frontend)
-
-Use when you have an API backend and static frontend files.
-
-**custom.conf:**
-```apache
-# Serve static files from DocumentRoot
-DocumentRoot /var/www/html
-
-<Directory /var/www/html>
-    Options -Indexes +FollowSymLinks
-    AllowOverride All
-    Require all granted
-</Directory>
-
-# Only /api goes to backend
-ProxyPass /api http://ruby-api:3000/api
-ProxyPassReverse /api http://ruby-api:3000/api
-```
-
-### Example 3: Full Proxy
-
-Use when everything should be proxied to the backend.
-
-**custom.conf:**
-```apache
-# Proxy everything to backend
-ProxyPass / http://backend:8080/
-ProxyPassReverse / http://backend:8080/
-```
+A complete `docker-compose` example is available in the [examples](examples/) folder.
 
 ## Documentation
 

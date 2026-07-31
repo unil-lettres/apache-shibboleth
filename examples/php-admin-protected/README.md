@@ -1,6 +1,6 @@
 # PHP Application with Protected Admin Area
 
-This example demonstrates a PHP application with:
+This example demonstrates a PHP application behind the Shibboleth proxy:
 - Public homepage (no authentication)
 - Protected `/admin` area (requires Shibboleth authentication)
 - Protected `/bob` area (requires Shibboleth authentication for uniqueID bob@domain.ch)
@@ -10,7 +10,7 @@ This example demonstrates a PHP application with:
 ```
 .
 ├── docker-compose.yml
-├── custom.conf          # Apache custom configuration
+├── custom.conf          # Apache custom configuration (full proxy)
 └── app/
     ├── index.php        # Public page
     └── admin/
@@ -19,11 +19,19 @@ This example demonstrates a PHP application with:
 
 ## How it works
 
-1. **Public access**: `/` is accessible without authentication
-2. **Protected access**: `/admin` requires Shibboleth authentication
-2. **Protected access**: `/bob` requires Shibboleth authentication for uniqueID bob@domain.ch
-3. **PHP-FPM**: Only `.php` files are processed by PHP-FPM
-4. **Static files**: CSS, JS, images served directly by Apache
+Two containers, each with one job:
+
+```
+client → apache-shibboleth (SAML, port 8080) → app (php:8.4-apache, port 80)
+```
+
+1. **`apache-shibboleth`** authenticates and proxies **everything** to `app` - it never touches your application files
+2. **`app`** serves the PHP pages and their static assets
+3. **Public access**: `/` is accessible without authentication
+4. **Protected access**: `/admin` requires Shibboleth authentication, `/bob` requires uniqueID `bob@domain.ch`
+5. **Attributes**: forwarded to `app` as `X-Shib-*` HTTP headers
+
+The `app` container publishes **no port**: it must only be reachable through the proxy, otherwise anyone could call it directly with forged `X-Shib-*` headers and bypass authentication entirely.
 
 ## Run the example
 
@@ -34,6 +42,15 @@ docker compose up --build
 # Access
 # http://localhost:8080/        → Public
 # http://localhost:8080/admin/  → Protected (redirects to SWITCHaai)
+```
+
+## Moving to production
+
+The only development-specific part is the `./app` bind mount on the `app` service. Replace it with your own image containing the code:
+
+```yaml
+  app:
+    image: myapp:1.4.2   # or: build: .
 ```
 
 ## Important Notes
