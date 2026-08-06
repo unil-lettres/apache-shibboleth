@@ -202,7 +202,7 @@ SHIB_SESSION_PROPERTIES: ""   # Forward none
 
 ### Header Trust
 
-Your backend authenticates users by trusting these headers, so they must be impossible to forge. Three conditions:
+Your backend authenticates users by trusting these headers, so they must be impossible to forge. Four conditions:
 
 1. **The proxy strips them.** Each forwarded attribute or session property is generated as a pair of directives:
 
@@ -223,6 +223,18 @@ Your backend authenticates users by trusting these headers, so they must be impo
    ```
 
    The failure is silent and reads like working code: no error, no empty value, just an attacker-chosen identity. Before trusting a header in your backend, check that the matching attribute or property is in your configuration.
+
+1. **Your backend discards headers whose name contains an underscore.** `X-Shib-Mail` and `X_Shib_Mail` are two different headers on the wire, so the proxy only clears the first one. CGI gateways then collapse them into a single name: RFC 3875 builds a variable by upper-casing the header name and replacing hyphens with underscores, so both become `HTTP_X_SHIB_MAIL` — `$_SERVER['HTTP_X_SHIB_MAIL']` in PHP. A backend reached through such a gateway can therefore be handed a forged value under the very name it trusts.
+
+   This concerns the CGI family only: CGI, FastCGI, WSGI, Rack, PSGI. Stacks that expose raw header names instead — Node, Go, ASGI — keep the two apart and are unaffected: a forged `x_shib_mail` still arrives, but it can never be mistaken for `x-shib-mail`.
+
+   Where the conversion does happen, the gateway already discards underscores, and the defaults are the safe ones:
+
+   | Gateway | Behaviour | To configure |
+   |---------|-----------|--------------|
+   | Apache (mod_php, CGI, FastCGI) | Discarded | Nothing - not configurable, and not needed |
+   | nginx (FastCGI to php-fpm) | Discarded | Keep the `underscores_in_headers off` default |
+   | gunicorn / WSGI | Discarded | Nothing |
 
 ## Custom Apache Configuration
 
