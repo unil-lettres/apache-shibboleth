@@ -1,0 +1,32 @@
+# Logging configuration of mod_shib, the Apache module.
+# The shibd daemon has its own configuration in /etc/shibboleth/shibd.logger.
+#
+# Only the appender differs from the file shipped by the Debian package: the
+# default LocalSyslogAppender writes to /dev/log, and no container runs a syslog
+# daemon, so every message is lost.
+
+# set overall behavior
+log4j.rootCategory=WARN, native_log
+
+# fairly verbose for DEBUG, so generally leave at WARN/INFO
+log4j.category.XMLTooling.XMLObject=WARN
+log4j.category.XMLTooling.XMLObjectBuilder=WARN
+log4j.category.XMLTooling.KeyInfoResolver=WARN
+log4j.category.Shibboleth.IPRange=WARN
+log4j.category.Shibboleth.PropertySet=WARN
+
+# useful categories to tune independently:
+#
+# interprocess message remoting
+#log4j.category.Shibboleth.Listener=DEBUG
+# mapping of requests to applicationId
+#log4j.category.Shibboleth.RequestMapper=DEBUG
+# high level session cache operations
+#log4j.category.Shibboleth.SessionCache=DEBUG
+
+# define the appender
+
+log4j.appender.native_log=org.apache.log4j.FileAppender
+log4j.appender.native_log.fileName=/dev/stderr
+log4j.appender.native_log.layout=org.apache.log4j.PatternLayout
+log4j.appender.native_log.layout.ConversionPattern=%p %c %x: %m%n

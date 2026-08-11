@@ -73,11 +73,20 @@ RUN mkdir -p /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2
     chown -R dockeruser:dockeruser /var/run/apache2/ && \
     chown -R dockeruser:dockeruser /etc/apache2/sites-available/ && \
     chmod -R g+r /etc/shibboleth/ && \
-    chown -R dockeruser:_shibd /etc/shibboleth/
+    chown -R dockeruser:_shibd /etc/shibboleth/ /var/log/shibboleth/
+
+# Send the logs to the container output.
+# Must come after the chown above, which would follow these symlinks.
+RUN ln -sf /dev/stdout /var/log/shibboleth/shibd.log && \
+    ln -sf /dev/stdout /var/log/shibboleth/transaction.log && \
+    ln -sf /dev/stdout /var/log/apache2/access.log && \
+    ln -sf /dev/stdout /var/log/apache2/other_vhosts_access.log && \
+    ln -sf /dev/stderr /var/log/apache2/error.log
 
 # Copy configuration files
 COPY config/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --chown=dockeruser:_shibd config/native.logger /etc/shibboleth/native.logger
 
 # Copy the entrypoint script
 COPY scripts/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
