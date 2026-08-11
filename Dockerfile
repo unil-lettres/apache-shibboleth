@@ -60,20 +60,24 @@ RUN curl --output /etc/shibboleth/SWITCHaaiRootCA.crt.pem \
 RUN sed -i "s|handlerSSL=\"true\"|handlerSSL=\"false\"|g" "/etc/shibboleth/shibboleth2.xml"
 
 # Create non-root user for running services
-# Add dockeruser to _shibd group so shibd daemon can access necessary files
 RUN groupadd -r dockeruser --gid=1000 && \
-    useradd -r -g dockeruser --uid=1000 --groups=_shibd --home-dir=/var/www/html --shell=/sbin/nologin dockeruser
+    useradd -r -g dockeruser --uid=1000 --home-dir=/var/www/html --shell=/sbin/nologin dockeruser
 
 # Create directories and adjust ownership
 RUN mkdir -p /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ /var/log/supervisor/ && \
-    chown -R dockeruser:dockeruser /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ /var/cache/shibboleth/ && \
-    chown -R dockeruser:dockeruser /var/www/html && \
-    chown -R dockeruser:dockeruser /var/log/apache2/ && \
-    chown -R dockeruser:dockeruser /var/log/supervisor/ && \
-    chown -R dockeruser:dockeruser /var/run/apache2/ && \
-    chown -R dockeruser:dockeruser /etc/apache2/sites-available/ && \
-    chmod -R g+r /etc/shibboleth/ && \
-    chown -R dockeruser:_shibd /etc/shibboleth/ /var/log/shibboleth/
+    chown -R dockeruser:dockeruser \
+        /etc/apache2/sites-available/ \
+        /etc/apache2/vhost.d/ \
+        /etc/shibboleth/ \
+        /run/shibboleth/ \
+        /run/supervisor/ \
+        /var/cache/shibboleth/ \
+        /var/lib/shibboleth/ \
+        /var/log/apache2/ \
+        /var/log/shibboleth/ \
+        /var/log/supervisor/ \
+        /var/run/apache2/ \
+        /var/www/html
 
 # Send the logs to the container output.
 # Must come after the chown above, which would follow these symlinks.
@@ -84,17 +88,12 @@ RUN ln -sf /dev/stdout /var/log/shibboleth/shibd.log && \
     ln -sf /dev/stderr /var/log/apache2/error.log
 
 # Copy configuration files
-COPY config/vhost.conf /etc/apache2/sites-available/000-default.conf
+COPY --chown=dockeruser:dockeruser config/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --chown=dockeruser:_shibd config/native.logger /etc/shibboleth/native.logger
+COPY config/native.logger /etc/shibboleth/native.logger
 
 # Copy the entrypoint script
-COPY scripts/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Set ownership after copying files
-RUN chown dockeruser:dockeruser /etc/apache2/sites-available/000-default.conf && \
-    chown dockeruser:dockeruser /usr/local/bin/docker-entrypoint.sh
+COPY --chmod=755 scripts/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 WORKDIR /var/www/html
 
