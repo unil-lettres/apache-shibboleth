@@ -66,7 +66,7 @@ RUN groupadd -r dockeruser --gid=1000 && \
 
 # Create directories and adjust ownership
 RUN mkdir -p /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ /var/log/supervisor/ && \
-    chown -R dockeruser:dockeruser /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ && \
+    chown -R dockeruser:dockeruser /var/lib/shibboleth/ /run/shibboleth/ /run/supervisor/ /etc/apache2/vhost.d/ /var/cache/shibboleth/ && \
     chown -R dockeruser:dockeruser /var/www/html && \
     chown -R dockeruser:dockeruser /var/log/apache2/ && \
     chown -R dockeruser:dockeruser /var/log/supervisor/ && \
