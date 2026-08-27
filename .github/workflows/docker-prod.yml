@@ -1,4 +1,4 @@
-name: docker
+name: docker-prod
 on:
   schedule:
     - cron: '0 0 * * 1' # Every Monday at midnight
