@@ -33,6 +33,12 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # Enable Apache modules (proxy for reverse proxy mode)
 RUN a2enmod rewrite ssl shib remoteip proxy proxy_http proxy_fcgi headers
 
+# Limit Apache version disclosure
+RUN printf '%s\n' \
+    'ServerTokens Prod' \
+    'ServerSignature Off' \
+    >> /etc/apache2/apache2.conf
+
 # Configure RemoteIP for proxy support
 RUN { \
     echo RemoteIPHeader X-Real-IP ; \
