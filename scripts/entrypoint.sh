@@ -207,6 +207,21 @@ else
   echo "Shibboleth headers already configured. No action needed."
 fi
 
+# Enable/disable Apache security headers
+SECURITY_HEADERS_ENABLED="${SECURITY_HEADERS_ENABLED:-true}"
+case "$SECURITY_HEADERS_ENABLED" in
+  true|1|yes)
+    ;;
+  false|0|no)
+    rm -f /etc/apache2/vhost.d/security-headers.conf
+    echo "Security headers disabled."
+    ;;
+  *)
+    echo "ERROR: SECURITY_HEADERS_ENABLED must be true or false." >&2
+    exit 1
+    ;;
+esac
+
 # Configure custom Apache directives from environment variable
 if [ -n "$APACHE_CUSTOM_CONFIG" ]; then
   echo "Applying custom Apache configuration from APACHE_CUSTOM_CONFIG..."

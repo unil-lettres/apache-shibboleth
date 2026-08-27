@@ -89,6 +89,7 @@ RUN ln -sf /dev/stdout /var/log/shibboleth/shibd.log && \
 
 # Copy configuration files
 COPY --chown=dockeruser:dockeruser config/vhost.conf /etc/apache2/sites-available/000-default.conf
+COPY --chown=dockeruser:dockeruser config/security-headers.conf /etc/apache2/vhost.d/security-headers.conf
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY config/native.logger /etc/shibboleth/native.logger
 
