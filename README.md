@@ -30,18 +30,18 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 
 | Variable | Required | Default | Description                                                                                                                                                                    |
 |----------|----------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `SHIB_HOSTNAME` | Yes | - | Your domain name                                                                                                                                                               |
-| `SHIB_CONTACT` | Yes | - | Contact email                                                                                                                                                                  |
+| `SHIB_HOSTNAME` | Yes | - | Your domain name.                                                                                                                                                              |
+| `SHIB_CONTACT` | Yes | - | Contact email.                                                                                                                                                                 |
 | `SHIB_ENTITY_ID` | No | - | If entityID is not the same as the hostname (when multiple locations registered for the same entityID). You must only specify the `host` part of the ID.                       |
 | `SHIB_PROTECTED_PATHS` | No | `/` | Paths to protect with Shibboleth (comma-separated). Set to empty string `""` to disable protection and configure manually.                                                     |
-| `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`)                                                                        |
+| `SHIB_ALLOWED_USERS` | No | - | Restrict access to specific users by uniqueID (comma-separated, e.g., `user@domain.ch,other@domain.ch`).                                                                       |
 | `SHIB_ATTRIBUTES` | No | - | Shibboleth attributes to forward as HTTP headers (comma-separated). **Your backend must read only these.** See [Shibboleth Attributes](#shibboleth-attributes).                |
 | `SHIB_SESSION_PROPERTIES` | No | `Shib-Identity-Provider,Shib-Authentication-Instant,Shib-AuthnContext-Class` | Session properties to forward as HTTP headers (comma-separated). **Your backend must read only these.** Set to `""` to disable. See [Session Properties](#session-properties). |
-| `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`)                                                                                                               |
+| `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`).                                                                                                              |
 | `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded.               |
 | `SHIB_SP_CERT` | No | - | Content of existing Shibboleth public certificate (sp-cert.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded.       |
-| `SECURITY_HEADERS_ENABLED` | No | `false` | Enable or disable the Apache security headers [`config/security-headers.conf`](config/security-headers.conf)                                                                                                                        |
-| `APACHE_CUSTOM_CONFIG` | No | - | Custom Apache directives for config                                                                                                                                            |
+| `SECURITY_HEADERS_ENABLED` | No | `false` | Enable or disable the Apache security headers ([config/security-headers.conf](config/security-headers.conf)).                                                                  |
+| `APACHE_CUSTOM_CONFIG` | No | - | Custom Apache directives for config.                                                                                                                                           |
 
 > **Security concern:**
 >
