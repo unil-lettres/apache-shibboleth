@@ -208,7 +208,7 @@ else
 fi
 
 # Enable/disable Apache security headers
-SECURITY_HEADERS_ENABLED="${SECURITY_HEADERS_ENABLED:-true}"
+SECURITY_HEADERS_ENABLED="${SECURITY_HEADERS_ENABLED:-false}"
 case "$SECURITY_HEADERS_ENABLED" in
   true|1|yes)
     ;;

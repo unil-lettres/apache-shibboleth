@@ -40,7 +40,7 @@ SHIB_PROTECTED_PATHS: "/admin,/secured"   # Protect specific sections
 | `SHIB_RETURN_URL` | No | `/` | Return URL after authentication (e.g., `/welcome`, `/dashboard`)                                                                                                               |
 | `SHIB_SP_KEY` | No | - | Content of existing Shibboleth private key (sp-key.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded.               |
 | `SHIB_SP_CERT` | No | - | Content of existing Shibboleth public certificate (sp-cert.pem) to use instead of generating new ones. Can be plain text (starting with `-----BEGIN`) or base64 encoded.       |
-| `SECURITY_HEADERS_ENABLED` | No | `true` | Enable or disable the Apache security headers [`config/security-headers.conf`](config/security-headers.conf)                                                                                                                         |
+| `SECURITY_HEADERS_ENABLED` | No | `false` | Enable or disable the Apache security headers [`config/security-headers.conf`](config/security-headers.conf)                                                                                                                        |
 | `APACHE_CUSTOM_CONFIG` | No | - | Custom Apache directives for config                                                                                                                                            |
 
 > **Security concern:**
