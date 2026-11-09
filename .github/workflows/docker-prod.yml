@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.sha }}
 
       - name: Build image
         uses: unil-lettres/actions/docker-build@main
@@ -45,7 +45,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.sha }}
 
       - name: Merge service
         uses: unil-lettres/actions/docker-merge-prod@main
@@ -63,7 +63,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.sha }}
 
       - name: Update description
         uses: peter-evans/dockerhub-description@v5
